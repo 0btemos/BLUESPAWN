@@ -14,7 +14,7 @@ namespace Hunts {
         public:
         HuntT1053();
 
-        std::vector<EventLogs::EventLogItem> Get4698Events();
+        std::vector<EventLogs::EventLogItem> Get1Events();
         std::vector<EventLogs::EventLogItem> Get106Events();
 
         void Subtechnique005(IN CONST Scope& scope, OUT std::vector<std::shared_ptr<Detection>>& detections);

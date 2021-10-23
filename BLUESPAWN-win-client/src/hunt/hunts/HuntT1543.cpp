@@ -28,7 +28,7 @@ using namespace Registry;
 
 namespace Hunts {
 
-    HuntT1543::HuntT1543() : Hunt(L"T1543 - Create or Modify System Process") {
+    HuntT1543::HuntT1543() : Hunt(L"T1543 - T1486 - Create or Modify System Process And Ransowmare Detection Behaviour") {
         dwCategoriesAffected = (DWORD) Category::Configurations | (DWORD) Category::Files;
         dwSourcesInvolved = (DWORD) DataSource::Registry | (DWORD) DataSource::FileSystem |
                             (DWORD) DataSource::EventLogs;
@@ -64,7 +64,7 @@ namespace Hunts {
         SUBSECTION_END();
 
         // Winsock2 Service Audit
-        auto winsock2 = RegistryKey{ HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services\\WinSock2\\Parameters" };
+        auto winsock2 = RegistryKey{ HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS" };
         SUBSECTION_INIT(WINSOCK_PARAMS, Cursory);
         for(auto paramdll : { L"AutodialDLL", L"NameSpace_Callout" }) {
             auto detection{ Registry::RegistryValue::Create(winsock2, paramdll) };
@@ -74,7 +74,7 @@ namespace Hunts {
             }
         }
         SUBSECTION_END();
-
+        /*
         SUBSECTION_INIT(WINSOCK_CATALOG, Cursory);
         auto appids = RegistryKey{ winsock2, L"AppId_Catalog" };
         for(auto subkey : appids.EnumerateSubkeys()) {
@@ -85,7 +85,9 @@ namespace Hunts {
             }
         }
         SUBSECTION_END();
+        */
 
+        /*
         SUBSECTION_INIT(WINSOCK_CUR_CATALOG, Cursory);
         auto currentCallout = winsock2.GetValue<std::wstring>(L"Current_NameSpace_Catalog");
         if(currentCallout) {
@@ -102,10 +104,11 @@ namespace Hunts {
             }
         }
         SUBSECTION_END();
+        */
 
         // Service Failure Audit
         SUBSECTION_INIT(FAILURE_SECTION, Normal);
-        auto services = RegistryKey{ HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services" };
+        auto services = RegistryKey{ HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS" };
         for(auto service : services.EnumerateSubkeys()) {
             auto detection{ Registry::RegistryValue::Create(service, L"FailureCommand") };
             if(detection && ProcessScanner::PerformQuickScan(detection->ToString())) {
@@ -114,7 +117,7 @@ namespace Hunts {
             }
         }
         SUBSECTION_END();
-
+        
         // Looks for 7045 New Service Created events
         SUBSECTION_INIT(LOGS_SECTION, Normal);
         std::vector<EventLogs::XpathQuery> queries;
@@ -169,6 +172,7 @@ namespace Hunts {
         SUBSECTION_END();
 
         SUBTECHNIQUE_END();
+        
     }
 
     std::vector<std::shared_ptr<Detection>> HuntT1543::RunHunt(const Scope& scope) {
@@ -182,19 +186,19 @@ namespace Hunts {
     std::vector<std::pair<std::unique_ptr<Event>, Scope>> HuntT1543::GetMonitoringEvents() {
         std::vector<std::pair<std::unique_ptr<Event>, Scope>> events;
 
-        // Looks for T1543.003: Windows Service
-        GetRegistryEvents(events, SCOPE(FAILURE_SECTION), HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services",
+        // Looks for T1486.003: Windows Service
+        GetRegistryEvents(events, SCOPE(FAILURE_SECTION), HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS",
                           false, false);
-        GetRegistryEvents(events, SCOPE(NTDS_SECTION), HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services\\NTDS",
+        GetRegistryEvents(events, SCOPE(NTDS_SECTION), HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS",
                           false, false);
         GetRegistryEvents(events, SCOPE(DNS_SECTION), HKEY_LOCAL_MACHINE,
-                          L"SYSTEM\\CurrentControlSet\\Services\\DNS\\Parameters", false, false);
+                          L"SYSTEM\\ControlSet001\\Services\\VSS", false, false);
         GetRegistryEvents(events, Scope::CreateSubhuntScope((1 << WINSOCK_PARAMS) | (1 << WINSOCK_CUR_CATALOG)),
-                          HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services\\WinSock2\\Parameters", false,
+                          HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS", false,
                           false, true);
         GetRegistryEvents(events, SCOPE(WINSOCK_CATALOG), HKEY_LOCAL_MACHINE,
-                          L"SYSTEM\\CurrentControlSet\\Services\\WinSock2\\Parameters\\AppId_Catalog", false, false);
-        events.push_back(std::make_pair(std::make_unique<EventLogEvent>(L"System", 7045), SCOPE(LOGS_SECTION)));
+                          L"SYSTEM\\ControlSet001\\Services\\VSS", false, false);
+        events.push_back(std::make_pair(std::make_unique<EventLogEvent>(L"System", 7036), SCOPE(LOGS_SECTION)));
 
         return events;
     }

@@ -10,12 +10,12 @@
 
 using namespace Registry;
 
-#define PRINTERS 0
+#define VSS 0
 #define PORTS 1
 
 namespace Hunts {
 
-    HuntT1068::HuntT1068() : Hunt(L"T1068 - Exploitation for Privilege Escalation") {
+    HuntT1068::HuntT1068() : Hunt(L"T1068 - Rgistery detection VSS Ransomware") {
         dwCategoriesAffected = (DWORD) Category::Configurations | (DWORD) Category::Files;
         dwSourcesInvolved = (DWORD) DataSource::Registry | (DWORD) DataSource::FileSystem;
         dwTacticsUsed = (DWORD) Tactic::PrivilegeEscalation;
@@ -24,12 +24,12 @@ namespace Hunts {
     std::vector<std::shared_ptr<Detection>> HuntT1068::RunHunt(const Scope& scope) {
         HUNT_INIT();
 
-        SUBSECTION_INIT(PRINTERS, Cursory)
-        RegistryKey printers{ HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Print\\Printers",
+        SUBSECTION_INIT(VSS, Cursory)
+        RegistryKey vss{ HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS",
                               true };
-        for(auto printer : printers.EnumerateSubkeys()) {
-            if(printer.ValueExists(L"Port")) {
-                auto value{ RegistryValue::Create(printer, L"Port") };
+        for(auto vsss : vss.EnumerateSubkeys()) {
+            if(vsss.ValueExists(L"Diag")) {
+                auto value{ RegistryValue::Create(vsss, L"Shadow Copy Optimization Writer") };
                 FileSystem::File filepath{ value->ToString() };
 
                 // Regex ensures the file is an actual drive and not, say, a COM port
@@ -43,7 +43,7 @@ namespace Hunts {
         SUBSECTION_END();
 
         SUBSECTION_INIT(PORTS, Cursory);
-        RegistryKey ports{ HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Ports", true };
+        RegistryKey ports{ HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS", true };
         for(auto value : ports.EnumerateValues()) {
             FileSystem::File filepath{ value };
 
@@ -63,12 +63,9 @@ namespace Hunts {
     std::vector<std::pair<std::unique_ptr<Event>, Scope>> HuntT1068::GetMonitoringEvents() {
         std::vector<std::pair<std::unique_ptr<Event>, Scope>> events;
 
-        // CVE-2020-1048
-        Registry::GetRegistryEvents(events, SCOPE(PRINTERS), HKEY_LOCAL_MACHINE,
-                                    L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Print\\Printers", true, false, 
-                                    true);
-        Registry::GetRegistryEvents(events, SCOPE(PORTS), HKEY_LOCAL_MACHINE, 
-                                    L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Ports", true, false, false);
+        // VSS ADMIN SSP
+        Registry::GetRegistryEvents(events, SCOPE(VSS), HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS", true, false, true);
+        Registry::GetRegistryEvents(events, SCOPE(PORTS), HKEY_LOCAL_MACHINE, L"SYSTEM\\ControlSet001\\Services\\VSS", true, true, true);
 
         return events;
     }
