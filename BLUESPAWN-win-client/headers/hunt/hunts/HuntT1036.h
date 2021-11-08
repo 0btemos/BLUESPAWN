@@ -14,7 +14,8 @@ namespace Hunts {
 	 */
     class HuntT1036 : public Hunt {
         private:
-        // Credit: https://twitter.com/mattifestation/status/1172520995472756737/photo/1
+        // Credit: *
+        //github.com/sqrtZeroKnowledge/agent-z/
         std::vector<std::wstring> writableFolders = { L"%WINDIR%\\System32\\Microsoft\\crypto\\rsa\\machinekeys",
                                                       L"%WINDIR%\\System32\\tasks_"
                                                       L"migrated\\microsoft\\windows\\pla\\system",

@@ -8,7 +8,6 @@
 #include <optional>
 
 DEFINE_FUNCTION(NTSTATUS, NtSuspendProcess, NTAPI, IN HANDLE ProcessHandle);
-
 namespace Reactions{
 
 	class SuspendProcessReaction : public Reaction {
